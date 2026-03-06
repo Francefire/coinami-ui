@@ -36,10 +36,8 @@ export default function BalanceCard() {
       setTimeout(refreshData, 500);
     } catch (e) {
       if (e instanceof ApiError) {
-        // Surface smart-contract rejection clearly
-        const isCooldwon =
-          /cooldown|24h|claim/i.test(e.message) || e.status === 400;
-        if (isCooldwon) {
+        const isCooldown = /cooldown|24h/i.test(e.message);
+        if (isCooldown) {
           toast.error(
             "Smart Contract Rejected: Cooldown period of 24h active.",
             { description: "You can only claim 50 COIN once every 24 hours." }

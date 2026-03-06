@@ -54,17 +54,32 @@ export function fromHex(hex: string): Uint8Array {
  *  - null → "null", booleans → "true"/"false"
  *  - Strings escaped with double quotes
  */
-export function deterministicStringify(value: unknown): string {
+
+/**
+ * Python model fields typed as `float` are always serialized with a decimal
+ * point by json.dumps, even for whole numbers (50.0 → "50.0", not "50").
+ * Fields typed as `int` (nonce) must NOT have a decimal.
+ * This Set lists the Transaction.to_dict() keys that are Python floats.
+ */
+const TX_FLOAT_FIELDS = new Set(["amount"]);
+
+export function deterministicStringify(
+  value: unknown,
+  floatFields?: Set<string>,
+  _key?: string
+): string {
   if (value === null) return "null";
   if (typeof value === "boolean") return value ? "true" : "false";
   if (typeof value === "number") {
-    // Python json.dumps outputs integers without decimal point
-    if (Number.isInteger(value)) return value.toString();
+    // Whole-number floats must keep their decimal point to match Python json.dumps
+    if (Number.isInteger(value) && _key !== undefined && floatFields?.has(_key)) {
+      return `${value}.0`;
+    }
     return value.toString();
   }
   if (typeof value === "string") return JSON.stringify(value);
   if (Array.isArray(value)) {
-    return "[" + value.map(deterministicStringify).join(", ") + "]";
+    return "[" + value.map((v) => deterministicStringify(v, floatFields)).join(", ") + "]";
   }
   if (typeof value === "object") {
     const sorted = Object.keys(value as Record<string, unknown>).sort();
@@ -72,7 +87,7 @@ export function deterministicStringify(value: unknown): string {
       (k) =>
         JSON.stringify(k) +
         ": " +
-        deterministicStringify((value as Record<string, unknown>)[k])
+        deterministicStringify((value as Record<string, unknown>)[k], floatFields, k)
     );
     return "{" + pairs.join(", ") + "}";
   }
@@ -85,7 +100,7 @@ export function deterministicStringify(value: unknown): string {
 
 /** Matches hash_data() in src/crypto/utils.py */
 export function hashTxDict(txDict: Record<string, unknown>): string {
-  const jsonStr = deterministicStringify(txDict);
+  const jsonStr = deterministicStringify(txDict, TX_FLOAT_FIELDS);
   const bytes = new TextEncoder().encode(jsonStr);
   return toHex(sha256(bytes));
 }
