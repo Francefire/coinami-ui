@@ -7,19 +7,25 @@ import { useWallet } from "@/context/WalletContext";
 import { mine, sync, ApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { Pickaxe, RefreshCw } from "lucide-react";
+import MiningVisualizer from "@/components/visualizations/MiningVisualizer";
+import VisualizationToggle from "@/components/visualizations/VisualizationToggle";
+import { type Block } from "@/lib/api";
 
 export default function NodeControls() {
-  const { nodeUrl, refreshData } = useWallet();
+  const { nodeUrl, data, refreshData } = useWallet();
   const [mining, setMining] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [minedBlock, setMinedBlock] = useState<Block | null>(null);
 
   async function handleMine() {
     setMining(true);
+    setMinedBlock(null);
     const id = toast.loading("Mining… Searching for valid nonce.");
     try {
       const res = await mine(nodeUrl);
       toast.dismiss(id);
       toast.success(`Block mined! Hash: ${res.hash.slice(0, 16)}…`);
+      setMinedBlock(res.block);
       setTimeout(refreshData, 500);
     } catch (e) {
       toast.dismiss(id);
@@ -76,6 +82,22 @@ export default function NodeControls() {
           {syncing ? "Syncing…" : "Sync Chain"}
         </Button>
       </CardContent>
+
+      {/* Mining Visualization */}
+      <div className="px-6 pb-4">
+        <VisualizationToggle label="Show Mining Process">
+          <MiningVisualizer
+            mempool={data.mempool}
+            prevHash={
+              data.chain.length > 0
+                ? data.chain[data.chain.length - 1].header.hash
+                : "0".repeat(64)
+            }
+            minedBlock={minedBlock}
+            isMining={mining}
+          />
+        </VisualizationToggle>
+      </div>
     </Card>
   );
 }
