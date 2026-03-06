@@ -1,15 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTheme } from "next-themes";
 import { Input } from "@/components/ui/input";
 import { useWallet } from "@/context/WalletContext";
-import { Server, RefreshCw } from "lucide-react";
+import { Server, RefreshCw, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function TopBar() {
   const { nodeUrl, setNodeUrl, isConnected, refreshData } = useWallet();
   const [inputVal, setInputVal] = useState(nodeUrl);
   const [refreshing, setRefreshing] = useState(false);
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   // Keep input in sync if context changes externally
   useEffect(() => {
@@ -58,6 +63,21 @@ export default function TopBar() {
       >
         <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
       </button>
+
+      {/* Theme toggle */}
+      {mounted && (
+        <button
+          onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+          className="text-muted-foreground hover:text-foreground transition-colors"
+          title={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {resolvedTheme === "dark" ? (
+            <Sun className="h-4 w-4" />
+          ) : (
+            <Moon className="h-4 w-4" />
+          )}
+        </button>
+      )}
 
       {/* Connection status */}
       <div className="flex items-center gap-2 text-xs font-medium">

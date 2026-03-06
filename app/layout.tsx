@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -25,14 +26,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <TooltipProvider>
-          {children}
-          <Toaster />
-        </TooltipProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <TooltipProvider>
+            {children}
+            <Toaster />
+          </TooltipProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
