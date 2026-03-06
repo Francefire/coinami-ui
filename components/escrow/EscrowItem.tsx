@@ -8,6 +8,8 @@ import { postTx, ApiError, type EscrowEntry } from "@/lib/api";
 import { toast } from "sonner";
 import { ShieldCheck, ShieldOff } from "lucide-react";
 import { useState } from "react";
+import VisualizationToggle from "@/components/visualizations/VisualizationToggle";
+import EscrowStateMachine from "@/components/visualizations/EscrowStateMachine";
 
 interface EscrowItemProps {
   id: string;
@@ -133,6 +135,11 @@ export default function EscrowItem({ id, entry }: EscrowItemProps) {
           )}
         </div>
       )}
+
+      {/* Per-escrow state machine */}
+      <VisualizationToggle label="Show State Machine">
+        <EscrowStateMachine entry={entry} />
+      </VisualizationToggle>
     </div>
   );
 }
