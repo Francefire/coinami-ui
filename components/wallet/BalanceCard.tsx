@@ -7,7 +7,7 @@ import { useWallet } from "@/context/WalletContext";
 import { useSSEEvent } from "@/context/EventContext";
 import { useActionFlow } from "@/context/ActionFlowContext";
 import { signTransaction, type TxFields } from "@/lib/crypto";
-import { postTx, ApiError } from "@/lib/api";
+import { postClaim, ApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { Coins, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -76,7 +76,7 @@ export default function BalanceCard() {
       // Step 2 → 3: Signed, now broadcasting
       advanceStep(`Signature: ${signature.slice(0, 32)}…`);
 
-      const result = await postTx(nodeUrl, { ...txFields, signature });
+      const result = await postClaim(nodeUrl, { ...txFields, signature });
       // Step 3 → 4: Broadcast done, in mempool
       advanceStep(`Node accepted — Hash: ${result.hash.slice(0, 24)}…`);
 

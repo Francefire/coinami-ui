@@ -79,6 +79,12 @@ export interface AddPeersResponse {
   total: number;
 }
 
+export interface ClaimResponse {
+  status: string;
+  hash: string;
+  balance: number;
+}
+
 // ---------------------------------------------------------------------------
 // Error type
 // ---------------------------------------------------------------------------
@@ -157,6 +163,15 @@ export function getPeers(nodeUrl: string): Promise<PeersResponse> {
 /** POST /tx — broadcast a signed transaction */
 export function postTx(nodeUrl: string, tx: TxPayload): Promise<TxResponse> {
   return apiFetch<TxResponse>(`${nodeUrl}/tx`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(tx),
+  });
+}
+
+/** POST /claim — submit a daily claim transaction */
+export function postClaim(nodeUrl: string, tx: TxPayload): Promise<ClaimResponse> {
+  return apiFetch<ClaimResponse>(`${nodeUrl}/claim`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(tx),
