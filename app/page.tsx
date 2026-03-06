@@ -10,7 +10,7 @@ import Dashboard from "@/components/layout/Dashboard";
 import WalletTab from "@/components/wallet/WalletTab";
 import EscrowTab from "@/components/escrow/EscrowTab";
 import NetworkTab from "@/components/network/NetworkTab";
-import ExplorerTab from "@/components/explorer/ExplorerTab";
+
 import ActionFlowOverlay from "@/components/flow/ActionFlowOverlay";
 
 // ---------------------------------------------------------------------------
@@ -104,7 +104,6 @@ function AppContent() {
           {activeTab === "wallet" && <WalletTab />}
           {activeTab === "escrow" && <EscrowTab />}
           {activeTab === "network" && <NetworkTab />}
-          {activeTab === "explorer" && <ExplorerTab />}
         </>
       )}
     </Dashboard>

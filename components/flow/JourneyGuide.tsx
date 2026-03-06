@@ -85,14 +85,14 @@ export default function JourneyGuide({ activeTab, onNavigate }: JourneyGuideProp
     });
   }
 
-  if (chainLength > 1 && activeTab !== "explorer") {
+  if (chainLength > 1 && activeTab !== "network") {
     suggestions.push({
       key: "explore",
       icon: Blocks,
       title: "Explore the blockchain",
       description: `The chain has ${chainLength} blocks. See how blocks link together with hashes and merkle trees.`,
       actionLabel: "View Explorer",
-      tab: "explorer",
+      tab: "network",
     });
   }
 
