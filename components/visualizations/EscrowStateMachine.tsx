@@ -172,7 +172,7 @@ export default function EscrowStateMachine({
         Escrow State Machine
       </span>
 
-      <svg viewBox="0 0 370 120" className="w-full" style={{ maxHeight: 140 }}>
+      <svg viewBox="0 0 370 120" className="w-full" style={{ maxHeight: 400 }}>
         {/* Transition arrows */}
         {TRANSITIONS.map((t) => {
           const from = STATES.find((s) => s.id === t.from)!;
