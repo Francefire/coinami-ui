@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useActionFlow } from "@/context/ActionFlowContext";
 import JourneyGuide from "@/components/flow/JourneyGuide";
 
-export type Tab = "wallet" | "escrow" | "network" | "explorer";
+export type Tab = "wallet" | "escrow" | "network";
 
 interface Props {
   children: (activeTab: Tab) => React.ReactNode;
@@ -26,10 +26,10 @@ export default function Dashboard({ children }: Props) {
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         <TopBar />
 
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 w-full">
           <main className="min-h-full p-6">
             <JourneyGuide activeTab={activeTab} onNavigate={setActiveTab} />
             {children(activeTab)}

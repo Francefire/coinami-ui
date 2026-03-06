@@ -6,7 +6,7 @@ import { useWallet } from "@/context/WalletContext";
 import { useSSEEvent } from "@/context/EventContext";
 import BlockCard from "./BlockCard";
 import { type Block } from "@/lib/api";
-import { Layers, ChevronDown } from "lucide-react";
+import { Layers, ChevronRight } from "lucide-react";
 
 export default function BlockChain() {
   const { data } = useWallet();
@@ -42,7 +42,7 @@ export default function BlockChain() {
         <Layers className="h-10 w-10 opacity-20" />
         <p className="text-sm">No blocks on chain yet</p>
         <p className="text-xs text-muted-foreground/60">
-          Mine a block from the Network tab to get started
+          Mine a block to get started
         </p>
       </div>
     );
@@ -52,71 +52,71 @@ export default function BlockChain() {
   const ordered = [...blocks].reverse();
 
   return (
-    <div className="flex flex-col items-center">
-      {ordered.map((block, i) => {
-        const nextInChain =
-          i < ordered.length - 1 ? ordered[i + 1] : null;
-        const isLinked =
-          nextInChain !== null &&
-          block.header.prev_hash === nextInChain.header.hash;
-        const isNew = block.header.hash === newBlockHash;
-        const blockIndex = blocks.length - 1 - i;
+    <div className="overflow-x-auto pb-2 max-w-full">
+      <div className="flex flex-row items-start gap-0 min-w-min">
+        {ordered.map((block, i) => {
+          const nextInChain =
+            i < ordered.length - 1 ? ordered[i + 1] : null;
+          const isLinked =
+            nextInChain !== null &&
+            block.header.prev_hash === nextInChain.header.hash;
+          const isNew = block.header.hash === newBlockHash;
+          const blockIndex = blocks.length - 1 - i;
 
-        // Only highlight the CARD whose hash matches the hovered hash
-        const isCardHighlighted =
-          highlightedHash !== null &&
-          block.header.hash === highlightedHash;
+          const isCardHighlighted =
+            highlightedHash !== null &&
+            block.header.hash === highlightedHash;
 
-        // Only highlight the connector that links to the hovered block
-        const connectorHighlighted =
-          highlightedHash !== null &&
-          nextInChain !== null &&
-          nextInChain.header.hash === highlightedHash;
+          const connectorHighlighted =
+            highlightedHash !== null &&
+            nextInChain !== null &&
+            nextInChain.header.hash === highlightedHash;
 
-        return (
-          <div
-            key={block.header.hash}
-            className="flex flex-col items-center w-full max-w-sm"
-          >
-            {/* Block card */}
-            <div className="w-full">
-              <BlockCard
-                block={block}
-                index={blockIndex}
-                isGenesis={i === ordered.length - 1}
-                isNew={isNew}
-                isHighlighted={isCardHighlighted}
-                onHashHover={(hash) => setHighlightedHash(hash)}
-                onHashLeave={() => setHighlightedHash(null)}
-              />
-            </div>
-
-            {/* Centered connector arrow */}
-            {i < ordered.length - 1 && (
-              <div className="flex flex-col items-center py-0.5">
-                <motion.div
-                  className={`w-px h-4 transition-colors duration-200 ${
-                    connectorHighlighted
-                      ? "bg-primary shadow-[0_0_8px_1px] shadow-primary/50"
-                      : isLinked
-                      ? "bg-primary/25"
-                      : "bg-border/30"
-                  }`}
-                />
-                <ChevronDown
-                  className={`h-3 w-3 -mt-1.5 transition-colors duration-200 ${
-                    connectorHighlighted
-                      ? "text-primary"
-                      : isLinked
-                      ? "text-primary/25"
-                      : "text-border/30"
-                  }`}
+          return (
+            <div
+              key={block.header.hash}
+              className="flex flex-row items-center shrink-0"
+            >
+              {/* Block card */}
+              <div className="w-56">
+                <BlockCard
+                  block={block}
+                  index={blockIndex}
+                  isGenesis={i === ordered.length - 1}
+                  isNew={isNew}
+                  isHighlighted={isCardHighlighted}
+                  onHashHover={(hash) => setHighlightedHash(hash)}
+                  onHashLeave={() => setHighlightedHash(null)}
                 />
               </div>
-            )}
-          </div>
-        );
-      })}
+
+              {/* Horizontal connector arrow */}
+              {i < ordered.length - 1 && (
+                <div className="flex flex-row items-center px-0.5">
+                  <motion.div
+                    className={`h-px w-4 transition-colors duration-200 ${
+                      connectorHighlighted
+                        ? "bg-primary shadow-[0_0_8px_1px] shadow-primary/50"
+                        : isLinked
+                        ? "bg-primary/25"
+                        : "bg-border/30"
+                    }`}
+                  />
+                  <ChevronRight
+                    className={`h-3 w-3 -ml-1.5 transition-colors duration-200 ${
+                      connectorHighlighted
+                        ? "text-primary"
+                        : isLinked
+                        ? "text-primary/25"
+                        : "text-border/30"
+                    }`}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

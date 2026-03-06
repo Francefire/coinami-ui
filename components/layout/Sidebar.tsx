@@ -5,7 +5,6 @@ import {
   Wallet,
   ShieldCheck,
   Radio,
-  Blocks,
   LogOut,
   ChevronRight,
 } from "lucide-react";
@@ -21,7 +20,6 @@ const NAV_ITEMS: { tab: Tab; label: string; icon: React.ElementType }[] = [
   { tab: "wallet", label: "Wallet", icon: Wallet },
   { tab: "escrow", label: "Escrow", icon: ShieldCheck },
   { tab: "network", label: "Network", icon: Radio },
-  { tab: "explorer", label: "Explorer", icon: Blocks },
 ];
 
 export default function Sidebar({ activeTab, onTabChange }: Props) {

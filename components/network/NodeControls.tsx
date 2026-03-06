@@ -49,7 +49,7 @@ export default function NodeControls({ onMineStart, onSyncStart }: { onMineStart
         { id: "broadcast-block", title: "Broadcasting Block", description: "Sending the new block to all connected peers." },
       ],
       nextActions: [
-        { label: "View in Explorer", tab: "explorer" },
+        { label: "View in Explorer", tab: "network" },
         { label: "Send Coins", tab: "wallet" },
       ],
     });
@@ -82,7 +82,7 @@ export default function NodeControls({ onMineStart, onSyncStart }: { onMineStart
       completeFlow(
         { hash: res.hash },
         [
-          { label: "View in Explorer", tab: "explorer" },
+          { label: "View in Explorer", tab: "network" },
           { label: "Send Coins", tab: "wallet" },
         ],
       );
@@ -115,7 +115,7 @@ export default function NodeControls({ onMineStart, onSyncStart }: { onMineStart
         { id: "validate", title: "Validating Received Chain", description: "Checking if the peer's chain is valid and longer than ours." },
       ],
       nextActions: [
-        { label: "View Chain", tab: "explorer" },
+        { label: "View Chain", tab: "network" },
       ],
     });
 
@@ -127,7 +127,7 @@ export default function NodeControls({ onMineStart, onSyncStart }: { onMineStart
 
       completeFlow(
         { detail: `Chain synced to ${res.length} blocks.` },
-        [{ label: "View in Explorer", tab: "explorer" }],
+        [{ label: "View in Explorer", tab: "network" }],
       );
 
       toast.success(`Chain synced. Length: ${res.length} blocks.`);
