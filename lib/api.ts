@@ -37,16 +37,15 @@ export interface TxResponse {
 }
 
 export interface BlockHeader {
-  index: number;
-  timestamp: number;
-  previous_hash: string;
+  prev_hash: string;
   merkle_root: string;
+  timestamp: number;
   nonce: number;
   hash: string;
 }
 
 export interface Block {
-  b_header: BlockHeader;
+  header: BlockHeader;
   transactions: TxPayload[];
 }
 
@@ -102,10 +101,11 @@ const TIMEOUT_MS = 8_000;
 
 async function apiFetch<T>(
   url: string,
-  init?: RequestInit
+  init?: RequestInit,
+  timeoutMs: number = TIMEOUT_MS
 ): Promise<T> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timer = timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : null;
 
   let res: Response;
   try {
@@ -113,7 +113,7 @@ async function apiFetch<T>(
   } catch (err) {
     throw new ApiError(0, err instanceof Error ? err.message : "Network error");
   } finally {
-    clearTimeout(timer);
+    if (timer !== null) clearTimeout(timer);
   }
 
   if (!res.ok) {
@@ -163,9 +163,9 @@ export function postTx(nodeUrl: string, tx: TxPayload): Promise<TxResponse> {
   });
 }
 
-/** GET /mine — mine a new block from the mempool */
+/** GET /mine — mine a new block from the mempool (no timeout — PoW can be slow) */
 export function mine(nodeUrl: string): Promise<MineResponse> {
-  return apiFetch<MineResponse>(`${nodeUrl}/mine`);
+  return apiFetch<MineResponse>(`${nodeUrl}/mine`, undefined, 0);
 }
 
 /** POST /sync — replace chain with the longest valid chain from peers */

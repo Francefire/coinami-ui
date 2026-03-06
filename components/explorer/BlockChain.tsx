@@ -8,7 +8,7 @@ import { Layers } from "lucide-react";
 export default function BlockChain() {
   const { data } = useWallet();
   const blocks: Block[] = data.chain ?? [];
-
+  
   if (blocks.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
@@ -23,13 +23,8 @@ export default function BlockChain() {
 
   return (
     <div className="relative flex flex-col gap-0">
-      {ordered.map((block, i) => {
-        // The block right below in the visual list is actually the predecessor
-        // (ordered is newest-first, so ordered[i+1] is the predecessor)
-        const predecessor = ordered[i + 1] ?? null;
-
-        return (
-          <div key={block.b_header.index} className="relative flex flex-col">
+      {ordered.map((block, i) => (
+          <div key={block.header.hash} className="relative flex flex-col">
             {/* Timeline connector */}
             {i < ordered.length - 1 && (
               <div
@@ -52,14 +47,13 @@ export default function BlockChain() {
               <div className="flex-1 mb-5">
                 <BlockCard
                   block={block}
-                  prevBlockHash={predecessor ? predecessor.b_header.hash : null}
-                  isGenesis={block.b_header.index === 0}
+                  prevBlockHash={block.header.prev_hash}
+                  isGenesis={i === ordered.length - 1}
                 />
               </div>
             </div>
           </div>
-        );
-      })}
+      ))}
     </div>
   );
 }

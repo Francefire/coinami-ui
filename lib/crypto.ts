@@ -172,9 +172,46 @@ export interface TxFields {
  *   2. SHA256(utf8(jsonStr))            →  txHashHex  (= calculate_hash)
  *   3. SHA256(utf8(txHashHex))          →  32-byte msgDigest
  *      (Python's ECDSA(SHA256) hashes the message before signing)
- *   4. secp256k1.sign(msgDigest, privKey)  →  DER bytes
- *   5. toHex(DER bytes)                 →  signature hex
+ *   4. secp256k1.sign(msgDigest, privKey)  →  compact 64-byte sig (r||s)
+ *   5. compactToDER(sig)               →  DER bytes (matches Python's output)
+ *   6. toHex(DER bytes)                →  signature hex
+ *
+ * NOTE: @noble/secp256k1 v3 does NOT support format:'der' — it throws.
+ * We get compact (r||s) and encode to DER manually.
  */
+
+/** Encode a compact 64-byte ECDSA signature (r||s) into DER format. */
+function compactToDER(compact: Uint8Array): Uint8Array {
+  function encodeInt(n: Uint8Array): Uint8Array {
+    // Strip leading zeros but keep at least 1 byte
+    let start = 0;
+    while (start < n.length - 1 && n[start] === 0) start++;
+    const trimmed = n.slice(start);
+    // Prepend 0x00 if high bit set (would be misinterpreted as negative)
+    if (trimmed[0] & 0x80) {
+      const out = new Uint8Array(trimmed.length + 1);
+      out[0] = 0x00;
+      out.set(trimmed, 1);
+      return out;
+    }
+    return trimmed;
+  }
+  const rEnc = encodeInt(compact.slice(0, 32));
+  const sEnc = encodeInt(compact.slice(32, 64));
+  const totalLen = 2 + rEnc.length + 2 + sEnc.length;
+  const der = new Uint8Array(2 + totalLen);
+  let i = 0;
+  der[i++] = 0x30; // SEQUENCE
+  der[i++] = totalLen;
+  der[i++] = 0x02; // INTEGER r
+  der[i++] = rEnc.length;
+  der.set(rEnc, i); i += rEnc.length;
+  der[i++] = 0x02; // INTEGER s
+  der[i++] = sEnc.length;
+  der.set(sEnc, i);
+  return der;
+}
+
 export async function signTransaction(
   txFields: TxFields,
   privateKeyHex: string
@@ -185,15 +222,14 @@ export async function signTransaction(
   // Step 3: Python's ECDSA(hashes.SHA256()) hashes the message again
   const msgDigest = sha256(new TextEncoder().encode(txHashHex));
 
-  // Step 4+5: sign with DER encoding
-  // prehash:false → we provide the raw 32-byte digest directly (already hashed)
-  // format:der    → DER-encoded bytes, matches Python's signature.hex()
-  // lowS:false    → Python's cryptography lib does NOT enforce low-S by default
+  // Step 4: sign — prehash:false so the library uses msgDigest as-is
+  // lowS:false → Python cryptography lib does NOT enforce low-S by default
   const privKeyBytes = fromHex(privateKeyHex);
-  const sigBytes = await secp.signAsync(msgDigest, privKeyBytes, {
+  const compactSig = await secp.signAsync(msgDigest, privKeyBytes, {
     prehash: false,
-    format: "der",
     lowS: false,
   });
-  return toHex(sigBytes);
+
+  // Step 5+6: convert compact (r||s) → DER → hex
+  return toHex(compactToDER(compactSig));
 }

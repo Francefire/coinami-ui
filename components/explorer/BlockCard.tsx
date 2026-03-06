@@ -30,11 +30,11 @@ function truncate(hex: string, chars = 16): string {
 
 export default function BlockCard({ block, prevBlockHash, isGenesis }: BlockCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const h = block.b_header;
+  const h = block.header;
 
   // A chain link is valid when this block's prev_hash === the actual previous block's hash
   const linkedToPrev =
-    prevBlockHash !== null && h.previous_hash === prevBlockHash;
+    prevBlockHash !== null && h.prev_hash === prevBlockHash;
 
   return (
     <div
@@ -51,7 +51,7 @@ export default function BlockCard({ block, prevBlockHash, isGenesis }: BlockCard
             variant="outline"
             className="font-mono text-xs border-primary/40 text-primary"
           >
-            #{h.index}
+            {truncate(h.hash, 12)}
           </Badge>
           {isGenesis && (
             <Badge variant="outline" className="text-xs border-border text-muted-foreground">
@@ -108,7 +108,7 @@ export default function BlockCard({ block, prevBlockHash, isGenesis }: BlockCard
             </div>
             <div className="col-span-2">
               <p className="text-muted-foreground">Previous Hash</p>
-              <p className="font-mono break-all">{h.previous_hash || "—"}</p>
+              <p className="font-mono break-all">{h.prev_hash || "—"}</p>
             </div>
           </div>
 
