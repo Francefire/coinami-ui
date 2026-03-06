@@ -2,6 +2,7 @@
 
 import { WalletProvider, useWallet } from "@/context/WalletContext";
 import UnlockScreen from "@/components/auth/UnlockScreen";
+import Dashboard from "@/components/layout/Dashboard";
 
 function AppContent() {
   const { wallet } = useWallet();
@@ -10,11 +11,17 @@ function AppContent() {
     return <UnlockScreen />;
   }
 
-  // Dashboard will replace this placeholder in Phase 6
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <p className="text-muted-foreground">Dashboard coming in Phase 6…</p>
-    </div>
+    <Dashboard>
+      {(activeTab) => (
+        <div className="text-muted-foreground text-sm">
+          {activeTab === "wallet" && <p>Wallet tab — coming in Phase 7</p>}
+          {activeTab === "escrow" && <p>Escrow tab — coming in Phase 8</p>}
+          {activeTab === "network" && <p>Network tab — coming in Phase 9</p>}
+          {activeTab === "explorer" && <p>Block Explorer — coming in Phase 10</p>}
+        </div>
+      )}
+    </Dashboard>
   );
 }
 
