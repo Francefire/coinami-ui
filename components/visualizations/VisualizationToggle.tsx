@@ -7,13 +7,15 @@ import { GraduationCap, X } from "lucide-react";
 interface VisualizationToggleProps {
   children: React.ReactNode;
   label?: string;
+  defaultOpen?: boolean;
 }
 
 export default function VisualizationToggle({
   children,
   label = "Show How It Works",
+  defaultOpen = false,
 }: VisualizationToggleProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
 
   return (
     <div className="flex flex-col gap-3">
