@@ -20,6 +20,7 @@ interface BlockCardProps {
   isHighlighted?: boolean;
   onHashHover?: (hash: string) => void;
   onHashLeave?: () => void;
+  onExpandChange?: (expanded: boolean) => void;
 }
 
 /* 4×2 color grid derived from hash bytes — gives each block a unique visual */
@@ -133,6 +134,7 @@ export default function BlockCard({
   isHighlighted = false,
   onHashHover,
   onHashLeave,
+  onExpandChange,
 }: BlockCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [showMerkle, setShowMerkle] = useState(false);
@@ -162,7 +164,11 @@ export default function BlockCard({
         }
         ${isNew ? "ring-1 ring-primary/40" : ""}
       `}
-      onClick={() => setExpanded((v) => !v)}
+      onClick={() => {
+        const next = !expanded;
+        setExpanded(next);
+        onExpandChange?.(next);
+      }}
       initial={isNew ? { scale: 0.9, opacity: 0 } : false}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ type: "spring", stiffness: 400, damping: 30 }}

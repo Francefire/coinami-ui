@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useWallet } from "@/context/WalletContext";
 import { useSSEEvent } from "@/context/EventContext";
@@ -10,9 +10,9 @@ import { Layers, ChevronRight } from "lucide-react";
 
 export default function BlockChain() {
   const { data } = useWallet();
-  const blocks: Block[] = data.chain ?? [];
+  const blocks: Block[] = useMemo(() => data.chain ?? [], [data.chain]);
   const [highlightedHash, setHighlightedHash] = useState<string | null>(null);
-  const [prevLength, setPrevLength] = useState(blocks.length);
+  const [expandedHashes, setExpandedHashes] = useState<Set<string>>(new Set());
   const [newBlockHash, setNewBlockHash] = useState<string | null>(null);
 
   useSSEEvent("block:validated", (evt) => {
@@ -23,19 +23,13 @@ export default function BlockChain() {
     }
   });
 
-  useEffect(() => {
-    if (blocks.length > prevLength && blocks.length > 0) {
-      const newest = blocks[blocks.length - 1];
-      setNewBlockHash((prev) => prev ?? newest.header.hash);
-      const t = setTimeout(() => setNewBlockHash(null), 2000);
-      setPrevLength(blocks.length);
-      return () => clearTimeout(t);
+  useSSEEvent("block:mining_completed", (evt) => {
+    const hash = evt.data?.hash as string | undefined;
+    if (hash) {
+      setNewBlockHash(hash);
+      setTimeout(() => setNewBlockHash(null), 3000);
     }
-    if (blocks.length !== prevLength) {
-      setPrevLength(blocks.length);
-    }
-  }, [blocks, prevLength]);
-
+  });
   if (blocks.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
@@ -62,6 +56,7 @@ export default function BlockChain() {
             block.header.prev_hash === nextInChain.header.hash;
           const isNew = block.header.hash === newBlockHash;
           const blockIndex = blocks.length - 1 - i;
+          const isExpanded = expandedHashes.has(block.header.hash);
 
           const isCardHighlighted =
             highlightedHash !== null &&
@@ -78,7 +73,10 @@ export default function BlockChain() {
               className="flex flex-row items-center shrink-0"
             >
               {/* Block card */}
-              <div className="w-56">
+              <motion.div
+                animate={{ width: isExpanded ? 384 : 224 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              >
                 <BlockCard
                   block={block}
                   index={blockIndex}
@@ -87,8 +85,16 @@ export default function BlockChain() {
                   isHighlighted={isCardHighlighted}
                   onHashHover={(hash) => setHighlightedHash(hash)}
                   onHashLeave={() => setHighlightedHash(null)}
+                  onExpandChange={(exp) =>
+                    setExpandedHashes((prev) => {
+                      const next = new Set(prev);
+                      if (exp) next.add(block.header.hash);
+                      else next.delete(block.header.hash);
+                      return next;
+                    })
+                  }
                 />
-              </div>
+              </motion.div>
 
               {/* Horizontal connector arrow */}
               {i < ordered.length - 1 && (
