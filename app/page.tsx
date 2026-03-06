@@ -5,6 +5,7 @@ import UnlockScreen from "@/components/auth/UnlockScreen";
 import Dashboard from "@/components/layout/Dashboard";
 import WalletTab from "@/components/wallet/WalletTab";
 import EscrowTab from "@/components/escrow/EscrowTab";
+import NetworkTab from "@/components/network/NetworkTab";
 
 function AppContent() {
   const { wallet } = useWallet();
@@ -19,7 +20,7 @@ function AppContent() {
         <>
           {activeTab === "wallet" && <WalletTab />}
           {activeTab === "escrow" && <EscrowTab />}
-          {activeTab === "network" && <p className="text-muted-foreground text-sm">Network tab — coming in Phase 9</p>}
+          {activeTab === "network" && <NetworkTab />}
           {activeTab === "explorer" && <p className="text-muted-foreground text-sm">Block Explorer — coming in Phase 10</p>}
         </>
       )}
