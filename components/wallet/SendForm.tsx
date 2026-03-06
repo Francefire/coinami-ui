@@ -1,0 +1,167 @@
+"use client";
+
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useWallet } from "@/context/WalletContext";
+import { signTransaction, type TxFields } from "@/lib/crypto";
+import { postTx, ApiError } from "@/lib/api";
+import { toast } from "sonner";
+import { Send, ChevronDown, ChevronUp } from "lucide-react";
+
+export default function SendForm() {
+  const { wallet, nodeUrl, refreshData } = useWallet();
+
+  const [recipient, setRecipient] = useState("");
+  const [amount, setAmount] = useState("");
+  const [sending, setSending] = useState(false);
+  const [showRaw, setShowRaw] = useState(false);
+  const [rawPayload, setRawPayload] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ recipient?: string; amount?: string }>({});
+
+  function validate(): boolean {
+    const errs: typeof errors = {};
+    const trimmedAddr = recipient.trim().toLowerCase();
+    if (!/^[0-9a-f]{40}$/.test(trimmedAddr)) {
+      errs.recipient = "Must be a valid 40-character hex address.";
+    }
+    const parsed = parseFloat(amount);
+    if (isNaN(parsed) || parsed <= 0) {
+      errs.amount = "Amount must be a positive number.";
+    }
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  }
+
+  async function buildAndPreview(): Promise<{ fields: TxFields; signature: string } | null> {
+    if (!wallet.privateKeyHex || !wallet.publicKeyHex || !wallet.address) return null;
+
+    const txFields: TxFields = {
+      type_tx: "transfer",
+      sender_address: wallet.address,
+      receiver_address: recipient.trim().toLowerCase(),
+      amount: parseFloat(amount),
+      nonce: Date.now(),
+      payload: { public_key: wallet.publicKeyHex },
+    };
+
+    const signature = await signTransaction(txFields, wallet.privateKeyHex);
+    return { fields: txFields, signature };
+  }
+
+  async function handlePreview() {
+    if (!validate()) return;
+    try {
+      const result = await buildAndPreview();
+      if (!result) return;
+      setRawPayload(
+        JSON.stringify({ ...result.fields, signature: result.signature }, null, 2)
+      );
+      setShowRaw(true);
+    } catch {
+      toast.error("Failed to sign transaction.");
+    }
+  }
+
+  async function handleSend() {
+    if (!validate()) return;
+    setSending(true);
+    try {
+      const result = await buildAndPreview();
+      if (!result) return;
+
+      const full = { ...result.fields, signature: result.signature };
+      setRawPayload(JSON.stringify(full, null, 2));
+
+      const res = await postTx(nodeUrl, full);
+      toast.success(`Transaction sent! Tx: ${res.hash.slice(0, 16)}…`);
+      setRecipient("");
+      setAmount("");
+      setRawPayload(null);
+      setShowRaw(false);
+      setTimeout(refreshData, 500);
+    } catch (e) {
+      if (e instanceof ApiError) {
+        toast.error(`Node rejected: ${e.message}`);
+      } else {
+        toast.error("Failed to send transaction.");
+      }
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <Card className="bg-card border-border">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+          Send Funds
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="recipient">Recipient Address</Label>
+          <Input
+            id="recipient"
+            placeholder="40-character hex address"
+            value={recipient}
+            onChange={(e) => setRecipient(e.target.value)}
+            className="font-mono text-sm"
+          />
+          {errors.recipient && (
+            <p className="text-xs text-destructive">{errors.recipient}</p>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="amount">Amount (COIN)</Label>
+          <Input
+            id="amount"
+            type="number"
+            min="0.0001"
+            step="any"
+            placeholder="e.g. 10"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+          {errors.amount && (
+            <p className="text-xs text-destructive">{errors.amount}</p>
+          )}
+        </div>
+
+        {/* Raw data toggle */}
+        <div>
+          <button
+            type="button"
+            onClick={rawPayload ? () => setShowRaw((v) => !v) : handlePreview}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {showRaw ? (
+              <ChevronUp className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronDown className="h-3.5 w-3.5" />
+            )}
+            {rawPayload ? (showRaw ? "Hide Raw Data" : "Show Raw Data") : "Preview Signed Payload"}
+          </button>
+
+          {showRaw && rawPayload && (
+            <pre className="mt-2 rounded-lg border border-border bg-secondary/50 p-3 text-xs font-mono text-muted-foreground overflow-x-auto whitespace-pre-wrap break-all">
+              {rawPayload}
+            </pre>
+          )}
+        </div>
+
+        <Button
+          onClick={handleSend}
+          disabled={sending || !wallet.isUnlocked}
+          className="w-full gap-2"
+        >
+          <Send className="h-4 w-4" />
+          {sending ? "Sending…" : "Send"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
