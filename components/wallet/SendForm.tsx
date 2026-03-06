@@ -12,9 +12,11 @@ import { toast } from "sonner";
 import { Send, ChevronDown, ChevronUp } from "lucide-react";
 import VisualizationToggle from "@/components/visualizations/VisualizationToggle";
 import SigningPipeline from "@/components/visualizations/SigningPipeline";
+import ValidationFlow from "@/components/visualizations/ValidationFlow";
+import { type TxPayload } from "@/lib/api";
 
 export default function SendForm() {
-  const { wallet, nodeUrl, refreshData } = useWallet();
+  const { wallet, nodeUrl, data, refreshData } = useWallet();
 
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
@@ -23,6 +25,7 @@ export default function SendForm() {
   const [rawPayload, setRawPayload] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ recipient?: string; amount?: string }>({});
   const [lastSignature, setLastSignature] = useState<string | null>(null);
+  const [lastSentTx, setLastSentTx] = useState<TxPayload | null>(null);
 
   function validate(): boolean {
     const errs: typeof errors = {};
@@ -81,6 +84,7 @@ export default function SendForm() {
 
       const res = await postTx(nodeUrl, full);
       toast.success(`Transaction sent! Tx: ${res.hash.slice(0, 16)}…`);
+      setLastSentTx(full);
       setRecipient("");
       setAmount("");
       setRawPayload(null);
@@ -182,6 +186,17 @@ export default function SendForm() {
           <Send className="h-4 w-4" />
           {sending ? "Sending…" : "Send"}
         </Button>
+
+        {/* Post-send validation visualization */}
+        {lastSentTx && (
+          <VisualizationToggle label="Show How Validation Works">
+            <ValidationFlow
+              tx={lastSentTx}
+              senderBalance={wallet.address ? (data.balances[wallet.address] ?? 0) : 0}
+              autoPlay
+            />
+          </VisualizationToggle>
+        )}
       </CardContent>
     </Card>
   );
