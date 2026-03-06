@@ -11,7 +11,7 @@ import MiningVisualizer from "@/components/visualizations/MiningVisualizer";
 import VisualizationToggle from "@/components/visualizations/VisualizationToggle";
 import { type Block } from "@/lib/api";
 
-export default function NodeControls() {
+export default function NodeControls({ onMineStart, onSyncStart }: { onMineStart?: () => void; onSyncStart?: () => void }) {
   const { nodeUrl, data, refreshData } = useWallet();
   const [mining, setMining] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -20,6 +20,7 @@ export default function NodeControls() {
   async function handleMine() {
     setMining(true);
     setMinedBlock(null);
+    onMineStart?.();
     const id = toast.loading("Mining… Searching for valid nonce.");
     try {
       const res = await mine(nodeUrl);
@@ -41,6 +42,7 @@ export default function NodeControls() {
 
   async function handleSync() {
     setSyncing(true);
+    onSyncStart?.();
     try {
       const res = await sync(nodeUrl);
       toast.success(`Chain synced. Length: ${res.length} blocks.`);
