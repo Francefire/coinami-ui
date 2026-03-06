@@ -4,11 +4,13 @@ import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { Input } from "@/components/ui/input";
 import { useWallet } from "@/context/WalletContext";
-import { Server, RefreshCw, Sun, Moon } from "lucide-react";
+import { useEvents } from "@/context/EventContext";
+import { Server, RefreshCw, Sun, Moon, Radio } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function TopBar() {
   const { nodeUrl, setNodeUrl, isConnected, refreshData } = useWallet();
+  const { isSSEConnected } = useEvents();
   const [inputVal, setInputVal] = useState(nodeUrl);
   const [refreshing, setRefreshing] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
@@ -80,16 +82,37 @@ export default function TopBar() {
       )}
 
       {/* Connection status */}
-      <div className="flex items-center gap-2 text-xs font-medium">
-        <span
-          className={cn(
-            "h-2 w-2 rounded-full",
-            isConnected ? "bg-green-400 shadow-[0_0_6px_1px_rgba(74,222,128,0.5)]" : "bg-red-500"
-          )}
-        />
-        <span className={isConnected ? "text-green-400" : "text-red-400"}>
-          {isConnected ? "Connected" : "Disconnected"}
-        </span>
+      <div className="flex items-center gap-3 text-xs font-medium">
+        {/* HTTP connection */}
+        <div className="flex items-center gap-1.5" title="HTTP connection">
+          <span
+            className={cn(
+              "h-2 w-2 rounded-full",
+              isConnected ? "bg-green-400 shadow-[0_0_6px_1px_rgba(74,222,128,0.5)]" : "bg-red-500"
+            )}
+          />
+          <span className={isConnected ? "text-green-400" : "text-red-400"}>
+            {isConnected ? "Connected" : "Disconnected"}
+          </span>
+        </div>
+
+        {/* SSE live stream */}
+        <div className="flex items-center gap-1.5" title="SSE live stream">
+          <Radio
+            className={cn(
+              "h-3 w-3",
+              isSSEConnected ? "text-primary animate-pulse" : "text-muted-foreground/40"
+            )}
+          />
+          <span
+            className={cn(
+              "text-[10px]",
+              isSSEConnected ? "text-primary" : "text-muted-foreground/60"
+            )}
+          >
+            {isSSEConnected ? "Live" : "Polling"}
+          </span>
+        </div>
       </div>
     </header>
   );

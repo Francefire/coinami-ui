@@ -1,20 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWallet } from "@/context/WalletContext";
+import { useSSEEvent } from "@/context/EventContext";
 import { signTransaction, type TxFields } from "@/lib/crypto";
 import { postTx, ApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { Coins, RefreshCw } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function BalanceCard() {
   const { wallet, nodeUrl, data, refreshData } = useWallet();
   const [claiming, setClaiming] = useState(false);
+  const [balancePulse, setBalancePulse] = useState(false);
+  const prevBalanceRef = useRef<number | null>(null);
 
   const address = wallet.address ?? "";
   const balance = data.balances[address] ?? 0;
+
+  // Detect balance changes and trigger pulse animation
+  useEffect(() => {
+    if (prevBalanceRef.current !== null && prevBalanceRef.current !== balance) {
+      setBalancePulse(true);
+      const t = setTimeout(() => setBalancePulse(false), 1500);
+      return () => clearTimeout(t);
+    }
+    prevBalanceRef.current = balance;
+  }, [balance]);
+
+  // SSE: on state/claim updates, trigger pulse proactively
+  useSSEEvent(["state:updated", "claim:validated"], () => {
+    setBalancePulse(true);
+    setTimeout(() => setBalancePulse(false), 1500);
+  });
 
   async function handleClaim() {
     if (!wallet.privateKeyHex || !wallet.publicKeyHex || !address) return;
@@ -71,8 +91,14 @@ export default function BalanceCard() {
       </CardHeader>
       <CardContent className="flex items-end justify-between gap-4">
         <div>
-          <p className="text-4xl font-bold tracking-tight text-foreground">
-            {balance.toLocaleString(undefined, {
+          <p
+            className={cn(
+              "text-4xl font-bold tracking-tight transition-all duration-500",
+              balancePulse
+                ? "text-primary scale-105 drop-shadow-[0_0_8px_oklch(0.75_0.15_196_/_0.5)]"
+                : "text-foreground"
+            )}
+          >            {balance.toLocaleString(undefined, {
               minimumFractionDigits: 0,
               maximumFractionDigits: 4,
             })}

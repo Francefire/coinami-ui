@@ -6,6 +6,7 @@ import MempoolList from "./MempoolList";
 import PeerList from "./PeerList";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useWallet } from "@/context/WalletContext";
+import { useSSEEvent } from "@/context/EventContext";
 import VisualizationToggle from "@/components/visualizations/VisualizationToggle";
 import NetworkTopology from "@/components/visualizations/NetworkTopology";
 
@@ -21,6 +22,23 @@ export default function NetworkTab() {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => setNetEvent("idle"), durationMs);
   }, []);
+
+  // SSE-driven network topology animations
+  useSSEEvent(["tx:broadcast", "block:broadcast"], () => {
+    fireEvent("broadcast", 3000);
+  });
+
+  useSSEEvent(["peer:sync_started", "peer:sync_completed", "peer:sync_replaced"], () => {
+    fireEvent("sync", 3000);
+  });
+
+  useSSEEvent(["block:mining_started", "block:mining_completed"], () => {
+    fireEvent("mine", 5000);
+  });
+
+  useSSEEvent("peer:added", () => {
+    fireEvent("broadcast", 2000);
+  });
 
   return (
     <div className="flex flex-col gap-6 py-2">
