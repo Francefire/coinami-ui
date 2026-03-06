@@ -10,6 +10,8 @@ import { signTransaction, type TxFields } from "@/lib/crypto";
 import { postTx, ApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { Send, ChevronDown, ChevronUp } from "lucide-react";
+import VisualizationToggle from "@/components/visualizations/VisualizationToggle";
+import SigningPipeline from "@/components/visualizations/SigningPipeline";
 
 export default function SendForm() {
   const { wallet, nodeUrl, refreshData } = useWallet();
@@ -20,6 +22,7 @@ export default function SendForm() {
   const [showRaw, setShowRaw] = useState(false);
   const [rawPayload, setRawPayload] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ recipient?: string; amount?: string }>({});
+  const [lastSignature, setLastSignature] = useState<string | null>(null);
 
   function validate(): boolean {
     const errs: typeof errors = {};
@@ -74,6 +77,7 @@ export default function SendForm() {
 
       const full = { ...result.fields, signature: result.signature };
       setRawPayload(JSON.stringify(full, null, 2));
+      setLastSignature(result.signature);
 
       const res = await postTx(nodeUrl, full);
       toast.success(`Transaction sent! Tx: ${res.hash.slice(0, 16)}…`);
@@ -152,6 +156,23 @@ export default function SendForm() {
             </pre>
           )}
         </div>
+
+        {/* Signing Pipeline Visualization */}
+        {wallet.address && wallet.publicKeyHex && recipient.trim() && parseFloat(amount) > 0 && (
+          <VisualizationToggle label="Show Signing Pipeline">
+            <SigningPipeline
+              txFields={{
+                type_tx: "transfer",
+                sender_address: wallet.address,
+                receiver_address: recipient.trim().toLowerCase(),
+                amount: parseFloat(amount),
+                nonce: Date.now(),
+                payload: { public_key: wallet.publicKeyHex },
+              }}
+              signature={lastSignature ?? undefined}
+            />
+          </VisualizationToggle>
+        )}
 
         <Button
           onClick={handleSend}
