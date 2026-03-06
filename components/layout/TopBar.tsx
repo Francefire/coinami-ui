@@ -5,12 +5,14 @@ import { useTheme } from "next-themes";
 import { Input } from "@/components/ui/input";
 import { useWallet } from "@/context/WalletContext";
 import { useEvents } from "@/context/EventContext";
-import { Server, RefreshCw, Sun, Moon, Radio } from "lucide-react";
+import { useActionFlow } from "@/context/ActionFlowContext";
+import { Server, RefreshCw, Sun, Moon, Radio, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function TopBar() {
   const { nodeUrl, setNodeUrl, isConnected, refreshData } = useWallet();
   const { isSSEConnected } = useEvents();
+  const { flowEnabled, setFlowEnabled } = useActionFlow();
   const [inputVal, setInputVal] = useState(nodeUrl);
   const [refreshing, setRefreshing] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
@@ -64,6 +66,20 @@ export default function TopBar() {
         title="Refresh data"
       >
         <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+      </button>
+
+      {/* Action flow popups toggle */}
+      <button
+        onClick={() => setFlowEnabled(!flowEnabled)}
+        className={cn(
+          "transition-colors",
+          flowEnabled
+            ? "text-primary hover:text-primary/80"
+            : "text-muted-foreground/40 hover:text-muted-foreground"
+        )}
+        title={flowEnabled ? "Disable action popups" : "Enable action popups"}
+      >
+        <Zap className="h-4 w-4" />
       </button>
 
       {/* Theme toggle */}
