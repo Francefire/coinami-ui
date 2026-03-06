@@ -25,6 +25,7 @@ export default function EscrowTab() {
   return (
     <div className="flex flex-col gap-6 py-2">
       {/* State Machine Visualization */}
+      {/* 
       <Card className="bg-card border-border">
         <CardContent className="pt-5">
           {lastEscrowEvent && (
@@ -38,7 +39,8 @@ export default function EscrowTab() {
             <EscrowStateMachine />
           </VisualizationToggle>
         </CardContent>
-      </Card>
+      </Card> 
+      */}
 
       <CreateEscrowForm />
       <div className="flex flex-col gap-3">
