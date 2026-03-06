@@ -27,6 +27,16 @@ const NAV_ITEMS: { tab: Tab; label: string; icon: React.ElementType }[] = [
 export default function Sidebar({ activeTab, onTabChange }: Props) {
   const { wallet, lock } = useWallet();
 
+  const handleCopyAddress = () => {
+    
+    if (wallet.address) {
+      navigator.clipboard.writeText(wallet.address);
+      alert("Address copied to clipboard!");
+      return;
+    }
+    alert("No address to copy!");
+  }
+
   return (
     <aside className="flex h-screen w-56 shrink-0 flex-col border-r border-border bg-sidebar">
       {/* Logo */}
@@ -64,10 +74,10 @@ export default function Sidebar({ activeTab, onTabChange }: Props) {
       {/* Footer: address + lock */}
       <div className="border-t border-border p-3">
         {wallet.address && (
-          <div className="mb-2 px-3 py-1">
+          <div className="mb-2 px-3 py-1" onClick={() => handleCopyAddress} style={{ cursor: "pointer" }}>
             <p className="text-xs text-muted-foreground font-medium mb-0.5">Address</p>
             <p className="truncate font-mono text-xs text-foreground">
-              {wallet.address.slice(0, 8)}…{wallet.address.slice(-6)}
+              {wallet.address}
             </p>
           </div>
         )}

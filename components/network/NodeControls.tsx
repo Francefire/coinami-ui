@@ -19,9 +19,7 @@ export default function NodeControls() {
     try {
       const res = await mine(nodeUrl);
       toast.dismiss(id);
-      toast.success(`Block mined! Hash: ${res.hash.slice(0, 16)}…`, {
-        description: `Block #${res.block.b_header.index}`,
-      });
+      toast.success(`Block mined! Hash: ${res.hash.slice(0, 16)}…`);
       setTimeout(refreshData, 500);
     } catch (e) {
       toast.dismiss(id);
