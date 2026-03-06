@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWallet } from "@/context/WalletContext";
+import { useSSEEvent } from "@/context/EventContext";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowRightLeft, Inbox, ChevronDown } from "lucide-react";
@@ -12,6 +13,29 @@ export default function MempoolList() {
   const { data } = useWallet();
   const txs = data.mempool ?? [];
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+  const [flashHash, setFlashHash] = useState<string | null>(null);
+  const prevCountRef = useRef(txs.length);
+
+  // SSE: flash highlight when a new TX enters the mempool
+  useSSEEvent("tx:validated", (evt) => {
+    const hash = evt.data?.hash as string | undefined;
+    if (hash) {
+      setFlashHash(hash);
+      setTimeout(() => setFlashHash(null), 2000);
+    }
+  });
+
+  // Detect count changes as a fallback flash trigger
+  useEffect(() => {
+    if (txs.length > prevCountRef.current) {
+      // New TX added — flash the first item (newest) briefly
+      if (!flashHash) {
+        setFlashHash("__new__");
+        setTimeout(() => setFlashHash(null), 1500);
+      }
+    }
+    prevCountRef.current = txs.length;
+  }, [txs.length, flashHash]);
 
   if (txs.length === 0) {
     return (
@@ -25,11 +49,18 @@ export default function MempoolList() {
   return (
     <ScrollArea className="h-80 pr-1">
       <div className="flex flex-col gap-2">
-        {txs.map((tx, i) => (
+        {txs.map((tx, i) => {
+          const isFlashing =
+            flashHash === "__new__" ? i === 0 : flashHash && tx.signature?.startsWith(flashHash);
+          return (
           <div key={i} className="flex flex-col">
             <button
               onClick={() => setExpandedIdx(expandedIdx === i ? null : i)}
-              className="rounded-md border border-border bg-background/50 p-3 flex items-start justify-between gap-3 hover:border-primary/30 transition-colors text-left w-full"
+              className={`rounded-md border p-3 flex items-start justify-between gap-3 transition-colors text-left w-full ${
+                isFlashing
+                  ? "border-primary bg-primary/5 shadow-[0_0_12px_0px] shadow-primary/20"
+                  : "border-border bg-background/50 hover:border-primary/30"
+              }`}
             >
               <div className="flex items-start gap-2 min-w-0">
                 <ArrowRightLeft className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
@@ -71,7 +102,8 @@ export default function MempoolList() {
               )}
             </AnimatePresence>
           </div>
-        ))}
+        );
+        })}
       </div>
     </ScrollArea>
   );

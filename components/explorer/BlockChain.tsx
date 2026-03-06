@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWallet } from "@/context/WalletContext";
+import { useSSEEvent } from "@/context/EventContext";
 import BlockCard from "./BlockCard";
 import { type Block } from "@/lib/api";
 import { Layers } from "lucide-react";
@@ -15,11 +16,22 @@ export default function BlockChain() {
   const [newBlockHash, setNewBlockHash] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Detect new block arrival
+  // SSE: immediately flag that a new block is coming (so the highlight fires
+  // as soon as chain data refreshes, not 5s later)
+  useSSEEvent("block:validated", (evt) => {
+    const hash = evt.data?.hash as string | undefined;
+    if (hash) {
+      setNewBlockHash(hash);
+      setTimeout(() => setNewBlockHash(null), 3000);
+    }
+  });
+
+  // Detect new block arrival from polled data (fallback when SSE has no hash)
   useEffect(() => {
     if (blocks.length > prevLength && blocks.length > 0) {
       const newest = blocks[blocks.length - 1];
-      setNewBlockHash(newest.header.hash);
+      // Only set if SSE hasn't already set it
+      setNewBlockHash((prev) => prev ?? newest.header.hash);
       const t = setTimeout(() => setNewBlockHash(null), 2000);
       setPrevLength(blocks.length);
       return () => clearTimeout(t);

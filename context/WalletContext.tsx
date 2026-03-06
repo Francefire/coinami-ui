@@ -64,6 +64,11 @@ interface WalletContextValue {
   // ---- polled chain data ----
   data: PolledData;
   refreshData: () => void;
+  /** Targeted refresh for specific data slices (used by SSE handler) */
+  refreshSlice: (slices: Array<"state" | "mempool" | "chain" | "peers">) => void;
+
+  /** Tell WalletContext SSE is active so polling interval can be extended */
+  setSSEActive: (active: boolean) => void;
 
   // ---- actions ----
   createWallet: (password: string) => Promise<KeyPair>;
@@ -104,6 +109,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [nodeUrl, setNodeUrlState] = useState(DEFAULT_NODE_URL);
   const [isConnected, setIsConnected] = useState(false);
   const [data, setData] = useState<PolledData>(defaultData);
+  const [sseActive, setSSEActive] = useState(false);
 
   // Stable ref to avoid stale closure in setInterval
   const nodeUrlRef = useRef(nodeUrl);
@@ -152,11 +158,55 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     fetchAll(nodeUrlRef.current);
   }, [fetchAll]);
 
+  // Targeted refresh — only fetch specific data slices
+  const refreshSlice = useCallback(
+    (slices: Array<"state" | "mempool" | "chain" | "peers">) => {
+      const url = nodeUrlRef.current;
+      const promises: Promise<void>[] = [];
+
+      if (slices.includes("state")) {
+        promises.push(
+          getState(url).then((res) =>
+            setData((d) => ({ ...d, balances: res.balances, escrow: res.escrow }))
+          )
+        );
+      }
+      if (slices.includes("mempool")) {
+        promises.push(
+          getMempool(url).then((res) =>
+            setData((d) => ({ ...d, mempool: res.transactions }))
+          )
+        );
+      }
+      if (slices.includes("chain")) {
+        promises.push(
+          getChain(url).then((res) =>
+            setData((d) => ({ ...d, chain: res.blocks }))
+          )
+        );
+      }
+      if (slices.includes("peers")) {
+        promises.push(
+          getPeers(url).then((res) =>
+            setData((d) => ({ ...d, peers: res.peers }))
+          )
+        );
+      }
+
+      Promise.all(promises)
+        .then(() => setIsConnected(true))
+        .catch(() => {});
+    },
+    []
+  );
+
+  // Poll interval: 5s normally, 30s when SSE is active (safety net only)
   useEffect(() => {
     fetchAll(nodeUrl);
-    const id = setInterval(() => fetchAll(nodeUrlRef.current), 5_000);
+    const intervalMs = sseActive ? 30_000 : 5_000;
+    const id = setInterval(() => fetchAll(nodeUrlRef.current), intervalMs);
     return () => clearInterval(id);
-  }, [nodeUrl, fetchAll]);
+  }, [nodeUrl, fetchAll, sseActive]);
 
   // ---------------------------------------------------------------------------
   // setNodeUrl — update + immediately re-check connection
@@ -250,6 +300,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         setNodeUrl,
         data,
         refreshData,
+        refreshSlice,
+        setSSEActive,
         createWallet,
         importWallet,
         unlock,

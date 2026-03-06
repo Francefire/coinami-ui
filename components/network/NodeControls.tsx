@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWallet } from "@/context/WalletContext";
+import { useSSEEvent } from "@/context/EventContext";
 import { mine, sync, ApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { Pickaxe, RefreshCw } from "lucide-react";
@@ -16,6 +17,20 @@ export default function NodeControls({ onMineStart, onSyncStart }: { onMineStart
   const [mining, setMining] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [minedBlock, setMinedBlock] = useState<Block | null>(null);
+
+  // SSE: when ANY source starts mining, show the visualization
+  useSSEEvent("block:mining_started", () => {
+    if (!mining) setMining(true);
+  });
+
+  // SSE: when mining completes (from any source), show the result
+  useSSEEvent("block:mining_completed", (evt) => {
+    setMining(false);
+    // If the event includes block data, use it for visualization
+    if (evt.data?.block) {
+      setMinedBlock(evt.data.block as Block);
+    }
+  });
 
   async function handleMine() {
     setMining(true);
