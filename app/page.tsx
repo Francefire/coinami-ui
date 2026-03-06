@@ -6,6 +6,7 @@ import Dashboard from "@/components/layout/Dashboard";
 import WalletTab from "@/components/wallet/WalletTab";
 import EscrowTab from "@/components/escrow/EscrowTab";
 import NetworkTab from "@/components/network/NetworkTab";
+import ExplorerTab from "@/components/explorer/ExplorerTab";
 
 function AppContent() {
   const { wallet } = useWallet();
@@ -21,7 +22,7 @@ function AppContent() {
           {activeTab === "wallet" && <WalletTab />}
           {activeTab === "escrow" && <EscrowTab />}
           {activeTab === "network" && <NetworkTab />}
-          {activeTab === "explorer" && <p className="text-muted-foreground text-sm">Block Explorer — coming in Phase 10</p>}
+          {activeTab === "explorer" && <ExplorerTab />}
         </>
       )}
     </Dashboard>
