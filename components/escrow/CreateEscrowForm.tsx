@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useWallet } from "@/context/WalletContext";
+import { useActionFlow } from "@/context/ActionFlowContext";
 import { signTransaction, type TxFields } from "@/lib/crypto";
 import { postTx, ApiError } from "@/lib/api";
 import { toast } from "sonner";
@@ -13,6 +14,7 @@ import { ShieldPlus } from "lucide-react";
 
 export default function CreateEscrowForm() {
   const { wallet, nodeUrl, refreshData } = useWallet();
+  const flow = useActionFlow();
 
   const [receiver, setReceiver] = useState("");
   const [amount, setAmount] = useState("");
@@ -36,29 +38,62 @@ export default function CreateEscrowForm() {
     if (!validate()) return;
     if (!wallet.privateKeyHex || !wallet.publicKeyHex || !wallet.address) return;
 
+    const parsedAmount = parseFloat(amount);
+    const { startFlow, advanceStep, failStep, completeFlow } = flow;
+
+    startFlow({
+      type: "create_escrow",
+      title: `Creating Escrow — ${parsedAmount} COIN`,
+      steps: [
+        { id: "build", title: "Building Escrow Transaction", description: "Generating escrow ID and building the create_escrow transaction." },
+        { id: "sign", title: "Signing with Private Key", description: "SECP256K1 ECDSA signature over the deterministic JSON payload." },
+        { id: "broadcast", title: "Broadcasting to Network", description: "Sending signed escrow transaction to the connected node." },
+        { id: "mempool", title: "Accepted into Mempool", description: "Escrow transaction pending — funds will be locked once mined." },
+      ],
+      nextActions: [
+        { label: "Mine a Block", tab: "network" },
+      ],
+    });
+
     const escrowId = crypto.randomUUID();
 
     const txFields: TxFields = {
       type_tx: "create_escrow",
       sender_address: wallet.address,
       receiver_address: receiver.trim().toLowerCase(),
-      amount: parseFloat(amount),
+      amount: parsedAmount,
       nonce: Date.now(),
       payload: { public_key: wallet.publicKeyHex, escrow_id: escrowId },
     };
 
+    // Step 1 → 2: Build done
+    advanceStep(`Escrow ID: ${escrowId.slice(0, 16)}… | Amount: ${parsedAmount} COIN`);
+
     setSubmitting(true);
     try {
       const signature = await signTransaction(txFields, wallet.privateKeyHex);
+      // Step 2 → 3: Signed
+      advanceStep(`Signature: ${signature.slice(0, 32)}…`);
+
       const res = await postTx(nodeUrl, { ...txFields, signature });
+      // Step 3 → 4: Broadcast done
+      advanceStep(`Node accepted — Hash: ${res.hash.slice(0, 24)}…`);
+
+      completeFlow(
+        { hash: res.hash },
+        [{ label: "Mine a Block", tab: "network" }],
+      );
+
       toast.success(`Escrow created! ID: ${escrowId.slice(0, 12)}… Tx: ${res.hash.slice(0, 12)}…`);
       setReceiver("");
       setAmount("");
       setTimeout(refreshData, 500);
     } catch (e) {
       if (e instanceof ApiError) {
+        failStep(`Node rejected: ${e.message}`);
         toast.error(`Node rejected: ${e.message}`);
       } else {
+        failStep("Network error — is the node running?");
         toast.error("Failed to create escrow.");
       }
     } finally {

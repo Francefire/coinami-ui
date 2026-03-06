@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useWallet } from "@/context/WalletContext";
+import { useActionFlow } from "@/context/ActionFlowContext";
 import { signTransaction, type TxFields } from "@/lib/crypto";
 import { postTx, ApiError, type EscrowEntry } from "@/lib/api";
 import { toast } from "sonner";
@@ -36,6 +37,7 @@ const STATUS_BADGE: Record<EscrowEntry["status"], React.ReactNode> = {
 
 export default function EscrowItem({ id, entry }: EscrowItemProps) {
   const { wallet, nodeUrl, refreshData } = useWallet();
+  const flow = useActionFlow();
   const [loading, setLoading] = useState<"release" | "cancel" | null>(null);
 
   const isReceiver = wallet.address === entry.receiver;
@@ -43,6 +45,24 @@ export default function EscrowItem({ id, entry }: EscrowItemProps) {
 
   async function act(action: "release_escrow" | "cancel_escrow") {
     if (!wallet.privateKeyHex || !wallet.publicKeyHex || !wallet.address) return;
+
+    const isRelease = action === "release_escrow";
+    const actionLabel = isRelease ? "Releasing" : "Cancelling";
+    const { startFlow, advanceStep, failStep, completeFlow } = flow;
+
+    startFlow({
+      type: action,
+      title: `${actionLabel} Escrow — ${entry.amount} COIN`,
+      steps: [
+        { id: "build", title: `Building ${actionLabel} Transaction`, description: `Creating ${action} transaction for escrow ${id.slice(0, 12)}…` },
+        { id: "sign", title: "Signing with Private Key", description: "SECP256K1 ECDSA signature over the deterministic JSON payload." },
+        { id: "broadcast", title: "Broadcasting to Network", description: "Sending signed transaction to the connected node." },
+        { id: "mempool", title: "Accepted into Mempool", description: `Escrow ${isRelease ? "release" : "cancellation"} pending — will take effect once mined.` },
+      ],
+      nextActions: [
+        { label: "Mine a Block", tab: "network" },
+      ],
+    });
 
     const txFields: TxFields = {
       type_tx: action,
@@ -54,18 +74,34 @@ export default function EscrowItem({ id, entry }: EscrowItemProps) {
       payload: { public_key: wallet.publicKeyHex, escrow_id: id },
     };
 
-    setLoading(action === "release_escrow" ? "release" : "cancel");
+    // Step 1 → 2: Build done
+    advanceStep(`Escrow ID: ${id.slice(0, 16)}…`);
+
+    setLoading(isRelease ? "release" : "cancel");
     try {
       const signature = await signTransaction(txFields, wallet.privateKeyHex);
+      // Step 2 → 3: Signed
+      advanceStep(`Signature: ${signature.slice(0, 32)}…`);
+
       const res = await postTx(nodeUrl, { ...txFields, signature });
+      // Step 3 → 4: Broadcast done
+      advanceStep(`Node accepted — Hash: ${res.hash.slice(0, 24)}…`);
+
+      completeFlow(
+        { hash: res.hash },
+        [{ label: "Mine a Block", tab: "network" }],
+      );
+
       toast.success(
-        `${action === "release_escrow" ? "Released" : "Cancelled"} escrow. Tx: ${res.hash.slice(0, 12)}…`
+        `${isRelease ? "Released" : "Cancelled"} escrow. Tx: ${res.hash.slice(0, 12)}…`
       );
       setTimeout(refreshData, 500);
     } catch (e) {
       if (e instanceof ApiError) {
+        failStep(`Node rejected: ${e.message}`);
         toast.error(`Node rejected: ${e.message}`);
       } else {
+        failStep("Network error — is the node running?");
         toast.error("Transaction failed.");
       }
     } finally {

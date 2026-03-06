@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { WalletProvider, useWallet } from "@/context/WalletContext";
 import { EventProvider, useEvents } from "@/context/EventContext";
+import { ActionFlowProvider } from "@/context/ActionFlowContext";
 import type { SSEEvent } from "@/lib/sse";
 import UnlockScreen from "@/components/auth/UnlockScreen";
 import Dashboard from "@/components/layout/Dashboard";
@@ -10,6 +11,7 @@ import WalletTab from "@/components/wallet/WalletTab";
 import EscrowTab from "@/components/escrow/EscrowTab";
 import NetworkTab from "@/components/network/NetworkTab";
 import ExplorerTab from "@/components/explorer/ExplorerTab";
+import ActionFlowOverlay from "@/components/flow/ActionFlowOverlay";
 
 // ---------------------------------------------------------------------------
 // SSEBridge — wires SSE events to targeted data refreshes in WalletContext
@@ -113,8 +115,11 @@ export default function Home() {
   return (
     <WalletProvider>
       <EventProvider>
-        <SSEBridge />
-        <AppContent />
+        <ActionFlowProvider>
+          <SSEBridge />
+          <AppContent />
+          <ActionFlowOverlay />
+        </ActionFlowProvider>
       </EventProvider>
     </WalletProvider>
   );

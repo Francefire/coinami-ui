@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useWallet } from "@/context/WalletContext";
+import { useActionFlow } from "@/context/ActionFlowContext";
 import { signTransaction, type TxFields } from "@/lib/crypto";
 import { postTx, ApiError } from "@/lib/api";
 import { toast } from "sonner";
@@ -17,6 +18,7 @@ import { type TxPayload } from "@/lib/api";
 
 export default function SendForm() {
   const { wallet, nodeUrl, data, refreshData } = useWallet();
+  const flow = useActionFlow();
 
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
@@ -73,16 +75,59 @@ export default function SendForm() {
 
   async function handleSend() {
     if (!validate()) return;
+    if (!wallet.privateKeyHex || !wallet.publicKeyHex || !wallet.address) return;
+
+    const parsedAmount = parseFloat(amount);
+    const { startFlow, advanceStep, failStep, completeFlow } = flow;
+
+    startFlow({
+      type: "transfer",
+      title: `Sending ${parsedAmount} COIN`,
+      steps: [
+        { id: "validate", title: "Validating Inputs", description: "Checking recipient address format and amount." },
+        { id: "build", title: "Building Transaction", description: "Creating transfer transaction with sorted-key deterministic JSON." },
+        { id: "sign", title: "Signing with Private Key", description: "SECP256K1 ECDSA: serialize → SHA-256 → SHA-256 → sign → DER encode." },
+        { id: "broadcast", title: "Broadcasting to Network", description: "Sending signed transaction to the connected node." },
+        { id: "mempool", title: "Accepted into Mempool", description: "Transaction is pending — waiting to be mined into a block." },
+      ],
+      nextActions: [
+        { label: "Mine a Block", tab: "network" },
+        { label: "View Mempool", tab: "network" },
+      ],
+    });
+
+    // Step 1 → 2: Validation passed
+    advanceStep(`To: ${recipient.trim().toLowerCase().slice(0, 12)}… | Amount: ${parsedAmount}`);
+
     setSending(true);
     try {
       const result = await buildAndPreview();
       if (!result) return;
 
+      // Step 2 → 3: Built, now signing done
+      advanceStep(`Nonce: ${result.fields.nonce}`);
+
       const full = { ...result.fields, signature: result.signature };
       setRawPayload(JSON.stringify(full, null, 2));
       setLastSignature(result.signature);
 
+      // Step 3 → 4: Signed, now broadcasting
+      advanceStep(`Signature: ${result.signature.slice(0, 32)}…`);
+
       const res = await postTx(nodeUrl, full);
+
+      // Step 4 → 5: Broadcast done, in mempool
+      advanceStep(`Node accepted — Hash: ${res.hash.slice(0, 24)}…`);
+
+      // Complete the flow
+      completeFlow(
+        { hash: res.hash },
+        [
+          { label: "Mine a Block", tab: "network" },
+          { label: "View Mempool", tab: "network" },
+        ],
+      );
+
       toast.success(`Transaction sent! Tx: ${res.hash.slice(0, 16)}…`);
       setLastSentTx(full);
       setRecipient("");
@@ -92,8 +137,10 @@ export default function SendForm() {
       setTimeout(refreshData, 500);
     } catch (e) {
       if (e instanceof ApiError) {
+        failStep(`Node rejected: ${e.message}`);
         toast.error(`Node rejected: ${e.message}`);
       } else {
+        failStep("Network error — is the node running?");
         toast.error("Failed to send transaction.");
       }
     } finally {
