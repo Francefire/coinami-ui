@@ -52,6 +52,8 @@ export interface ActionFlow {
 interface ActionFlowContextValue {
   activeFlow: ActionFlow | null;
   flowHistory: ActionFlow[];
+  flowEnabled: boolean;
+  setFlowEnabled: (enabled: boolean) => void;
   startFlow: (opts: {
     type: FlowType;
     title: string;
@@ -81,6 +83,16 @@ export function ActionFlowProvider({ children }: { children: React.ReactNode }) 
   const [activeFlow, setActiveFlow] = useState<ActionFlow | null>(null);
   const [flowHistory, setFlowHistory] = useState<ActionFlow[]>([]);
   const [navigateTab, setNavigateTabState] = useState<((tab: Tab) => void) | undefined>(undefined);
+  const [flowEnabled, setFlowEnabled] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const stored = localStorage.getItem("coinami_flow_enabled");
+    return stored === null ? true : stored === "true";
+  });
+
+  const handleSetFlowEnabled = useCallback((enabled: boolean) => {
+    setFlowEnabled(enabled);
+    localStorage.setItem("coinami_flow_enabled", String(enabled));
+  }, []);
 
   const startFlow = useCallback(
     (opts: {
@@ -89,6 +101,7 @@ export function ActionFlowProvider({ children }: { children: React.ReactNode }) 
       steps: Omit<FlowStep, "status">[];
       nextActions?: NextAction[];
     }): string => {
+      if (!flowEnabled) return "";
       const id = `flow-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       const steps: FlowStep[] = opts.steps.map((s, i) => ({
         ...s,
@@ -109,7 +122,7 @@ export function ActionFlowProvider({ children }: { children: React.ReactNode }) 
       setActiveFlow(flow);
       return id;
     },
-    [],
+    [flowEnabled],
   );
 
   const advanceStep = useCallback(
@@ -199,6 +212,8 @@ export function ActionFlowProvider({ children }: { children: React.ReactNode }) 
       value={{
         activeFlow,
         flowHistory,
+        flowEnabled,
+        setFlowEnabled: handleSetFlowEnabled,
         startFlow,
         advanceStep,
         failStep,
